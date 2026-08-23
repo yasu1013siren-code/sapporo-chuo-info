@@ -12,36 +12,36 @@ h1{margin:0;font-size:22px}header small{color:#aeb5bf}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}.toolbar button,.toolbar input{border:1px solid #d8dce2;background:#fff;border-radius:9px;padding:9px 13px}
 .toolbar button.active{background:#15181d;color:#fff}.toolbar input{min-width:220px}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}.stat{background:#fff;border-radius:12px;padding:15px;border:1px solid #e1e4e8}.stat b{font-size:25px;display:block}
-.card{background:#fff;border:1px solid #e1e4e8;border-radius:14px;padding:17px;margin:10px 0;box-shadow:0 2px 8px #00000008}.top{display:flex;justify-content:space-between;gap:10px}.badge{display:inline-block;border-radius:99px;padding:4px 9px;font-size:12px;font-weight:700}.new{background:#e5f7ea;color:#18733a}.close{background:#ffe8e8;color:#a52424}.event{background:#e7f0ff;color:#1f58a5}.meta{color:#68717d;font-size:13px;margin-top:7px}.desc{margin:10px 0;line-height:1.55}.actions{display:flex;gap:7px}.actions button{border:1px solid #ddd;background:#fff;border-radius:8px;padding:7px 10px;cursor:pointer}.actions a{color:#1769aa;text-decoration:none;font-size:13px}
+.card{background:#fff;border:1px solid #e1e4e8;border-radius:14px;padding:17px;margin:10px 0;box-shadow:0 2px 8px #00000008}.top{display:flex;justify-content:space-between;gap:10px}.badge{display:inline-block;border-radius:99px;padding:4px 9px;font-size:12px;font-weight:700}.new{background:#e5f7ea;color:#18733a}.close{background:#ffe8e8;color:#a52424}.event{background:#e7f0ff;color:#1f58a5}.meta{color:#68717d;font-size:13px;margin-top:7px}.desc{margin:10px 0;line-height:1.55}.actions{display:flex;gap:7px}.actions button{border:1px solid #ddd;background:#fff;border-radius:8px;padding:7px 10px;cursor:pointer}
 .empty{padding:45px;text-align:center;color:#777;background:#fff;border-radius:12px}
 @media(max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}.wrap{padding:12px}}
 </style>
 </head>
 <body>
-<header><div class="wrap" style="padding:0"><h1>SAPPORO CENTRAL INFO</h1><small>札幌市中央区｜飲食店の開店・閉店・イベント</small><br><small id="srcNote" style="color:#7c8592">読み込み中…</small></div></header>
+<header><div class="wrap" style="padding:0"><h1>SAPPORO CENTRAL INFO</h1><small>札幌市中央区・すすきの・麻生｜開店・閉店・アニメイベント（直近1ヶ月）</small><br><small id="srcNote" style="color:#7c8592">読み込み中…</small></div></header>
 <main class="wrap">
   <div class="toolbar">
     <button class="active" data-filter="all">すべて</button><button data-filter="new">🟢 新店</button>
-    <button data-filter="close">🔴 閉店</button><button data-filter="event">🔵 イベント</button>
+    <button data-filter="close">🔴 閉店</button><button data-filter="event">🔵 アニメ</button>
     <input id="q" placeholder="店名・エリア・キーワード検索">
   </div>
   <div class="stats">
     <div class="stat"><small>総件数</small><b id="total">0</b></div>
     <div class="stat"><small>新店</small><b id="newCount">0</b></div>
     <div class="stat"><small>閉店</small><b id="closeCount">0</b></div>
-    <div class="stat"><small>イベント</small><b id="eventCount">0</b></div>
+    <div class="stat"><small>アニメ</small><b id="eventCount">0</b></div>
   </div>
   <div id="list"></div>
 </main>
 <script>
 const seed=[
-{"id":"seed-1","category":"close","title":"Milk Cafe みるくsan サッポロファクトリー店が閉店","shop":"Milk Cafe みるくsan サッポロファクトリー店","area":"サッポロファクトリー","date":"2026-08-16","summary":"2026年8月16日をもって閉店したという情報。","source":"中央区ショップス","url":"https://www.shopship.jp/chuo/","favorite":false,"read":false},
-{"id":"seed-2","category":"close","title":"STANDING BAR INDEX-SAPPOROが閉店予定","shop":"STANDING BAR INDEX-SAPPORO","area":"すすきの","date":"2026-09-26","summary":"2026年9月26日をもって閉店予定という情報。","source":"中央区ショップス","url":"https://www.shopship.jp/chuo/open-close/","favorite":false,"read":false},
-{"id":"seed-3","category":"new","title":"カレーうどん 鬼はそと 大通にOPEN","shop":"カレーうどん 鬼はそと","area":"大通","date":"2026-09-01","summary":"2026年9月1日よりOPEN予定という情報。","source":"中央区ショップス","url":"https://www.shopship.jp/chuo/open-close/","favorite":false,"read":false},
-{"id":"seed-4","category":"new","title":"SeasideChill 潮結 すすきのにOPEN","shop":"SeasideChill 潮結","area":"すすきの","date":"2026-09-01","summary":"2026年9月1日よりOPEN予定という情報。","source":"中央区ショップス","url":"https://www.shopship.jp/chuo/","favorite":false,"read":false},
-{"id":"seed-5","category":"new","title":"WINE BAR KOZO すすきのにOPEN","shop":"WINE BAR KOZO","area":"すすきの","date":"2026-08-14","summary":"2026年8月14日よりOPENという情報。","source":"中央区ショップス","url":"https://www.shopship.jp/chuo/open-close/","favorite":false,"read":false},
-{"id":"seed-6","category":"event","title":"札幌PARCO イベント・ポップアップ","shop":"札幌PARCO","area":"大通","date":"2026-08-22","summary":"札幌PARCOのイベント・ポップアップ情報。開催期間は各イベントにより異なります。","source":"札幌PARCO","url":"https://sapporo.parco.jp/event/","favorite":false,"read":false},
-{"id":"seed-7","category":"event","title":"札幌市中央区の開催予定イベント","shop":"","area":"札幌市中央区","date":"2026-08-23","summary":"中央区の本日以降のイベントを検索できるイベント一覧。","source":"まいぷれ札幌市中央区","url":"https://sapporo.mypl.net/chuo/event/list","favorite":false,"read":false}
+{"id":"seed-1","category":"close","title":"Milk Cafe みるくsan サッポロファクトリー店が閉店","shop":"Milk Cafe みるくsan サッポロファクトリー店","area":"サッポロファクトリー","date":"2026-08-16","summary":"2026年8月16日をもって閉店したという情報。","source":"中央区ショップス","favorite":false,"read":false},
+{"id":"seed-2","category":"close","title":"STANDING BAR INDEX-SAPPOROが閉店予定","shop":"STANDING BAR INDEX-SAPPORO","area":"すすきの","date":"2026-09-26","summary":"2026年9月26日をもって閉店予定という情報。","source":"中央区ショップス","favorite":false,"read":false},
+{"id":"seed-3","category":"new","title":"カレーうどん 鬼はそと 大通にOPEN","shop":"カレーうどん 鬼はそと","area":"大通","date":"2026-09-01","summary":"2026年9月1日よりOPEN予定という情報。","source":"中央区ショップス","favorite":false,"read":false},
+{"id":"seed-4","category":"new","title":"SeasideChill 潮結 すすきのにOPEN","shop":"SeasideChill 潮結","area":"すすきの","date":"2026-09-01","summary":"2026年9月1日よりOPEN予定という情報。","source":"中央区ショップス","favorite":false,"read":false},
+{"id":"seed-5","category":"new","title":"WINE BAR KOZO すすきのにOPEN","shop":"WINE BAR KOZO","area":"すすきの","date":"2026-08-14","summary":"2026年8月14日よりOPENという情報。","source":"中央区ショップス","favorite":false,"read":false},
+{"id":"seed-6","category":"event","title":"札幌PARCOでアニメコラボカフェ開催","shop":"札幌PARCO","area":"大通","date":"2026-08-22","summary":"人気アニメとのコラボカフェ・ポップアップストアが期間限定開催。","source":"札幌PARCO","favorite":false,"read":false},
+{"id":"seed-7","category":"event","title":"麻生でコスプレ即売会イベント開催","shop":"","area":"麻生","date":"2026-08-23","summary":"同人・コスプレ関連の即売会イベント情報。","source":"まいぷれ札幌市中央区","favorite":false,"read":false}
 ];
 let items=[];
 let filter="all";
@@ -78,13 +78,12 @@ function render(){
  document.getElementById("eventCount").textContent=items.filter(x=>x.category==="event").length;
  document.getElementById("list").innerHTML=a.length?a.map(x=>`
  <article class="card" style="${x.read?'opacity:.65':''}">
-  <div class="top"><div><span class="badge ${x.category}">${x.category==="new"?"新店":x.category==="close"?"閉店":"イベント"}</span>
+  <div class="top"><div><span class="badge ${x.category}">${x.category==="new"?"新店":x.category==="close"?"閉店":"アニメイベント"}</span>
   <h3>${esc(x.title)}</h3></div><div> ${x.favorite?"⭐":"☆"}</div></div>
   <div class="meta">${esc(x.area)}　${esc(x.date||"日付未定")}</div>
   <div class="desc">${esc(x.summary)}</div>
   <div class="actions"><button onclick="toggleRead('${x.id}')">${x.read?"未読に戻す":"既読"}</button>
-  <button onclick="toggleFav('${x.id}')">${x.favorite?"お気に入り解除":"⭐ お気に入り"}</button>
-  <a href="${esc(x.url)}" target="_blank" rel="noopener">情報元を開く ↗</a></div>
+  <button onclick="toggleFav('${x.id}')">${x.favorite?"お気に入り解除":"⭐ お気に入り"}</button></div>
  </article>`).join(""):`<div class="empty">該当する情報はありません。</div>`;
 }
 function toggleRead(id){let x=items.find(x=>x.id===id);if(x){x.read=!x.read;state[id]={...(state[id]||{}),read:x.read};saveState();render()}}
