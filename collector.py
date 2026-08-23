@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Sapporo Chuo Info v2.2 collector + LINE notification.
+"""Sapporo Chuo Info v2.3 collector + LINE notification.
 
 Environment variables:
   LINE_CHANNEL_ACCESS_TOKEN
   LINE_TO_USER_ID
 
 Optional:
-  MAX_ITEMS=8    # 通知1カテゴリあたりの最大件数
-  MAX_STORE=300  # data/items.json に保持する最大件数
+  MAX_ITEMS=5     # 通知1カテゴリあたりの最大件数
+  MAX_STORE=300   # data/items.json に保持する最大件数
+  MAX_AGE_DAYS=30 # これより古い記事は対象外
 
 新着判定は data/items.json に保存済みのIDと突き合わせて行う。
 このファイルはワークフロー側でリポジトリにコミットして永続化する前提
@@ -19,8 +20,10 @@ from email.utils import parsedate_to_datetime
 from datetime import datetime, timezone, timedelta
 
 JST = timezone(timedelta(hours=9))
-MAX_ITEMS = int(os.getenv("MAX_ITEMS", "8"))
+MAX_ITEMS = int(os.getenv("MAX_ITEMS", "5"))
 MAX_STORE = int(os.getenv("MAX_STORE", "300"))
+MAX_AGE_DAYS = int(os.getenv("MAX_AGE_DAYS", "30"))
+MAX_TITLE_LEN = 36
 DATA_PATH = os.path.join("data", "items.json")
 
 QUERIES = [
@@ -71,30 +74,38 @@ def guess_area(text):
     return matches[0] if matches else "中央区"
 
 
-def to_date_str(pubdate):
+def parse_pubdate(pubdate):
     try:
-        return parsedate_to_datetime(pubdate).astimezone(JST).strftime("%Y-%m-%d")
+        return parsedate_to_datetime(pubdate).astimezone(JST)
     except Exception:
-        return datetime.now(JST).strftime("%Y-%m-%d")
+        return None
 
 
 def parse(data, hint):
     root = ET.fromstring(data)
     out = []
+    now = datetime.now(JST)
     for it in root.findall(".//item"):
         title = it.findtext("title", "")
         desc = clean(it.findtext("description", ""))
         link = it.findtext("link", "")
         pub = it.findtext("pubDate", "")
         text = title + " " + desc
+
+        pub_dt = parse_pubdate(pub)
+        # 公開日が分からない記事は除外しすぎないよう許容するが、
+        # 分かる場合は MAX_AGE_DAYS より古ければ対象外にする
+        if pub_dt is not None and (now - pub_dt).days > MAX_AGE_DAYS:
+            continue
+
         if not any(k.lower() in text.lower() for k in CHUO):
             continue
         cat = category(text, hint)
         if cat in ("new", "close") and not any(k.lower() in text.lower() for k in FOOD):
             continue
-        # イベントはアニメ関連キーワードにマッチするものだけ残す
         if cat == "event" and not any(k.lower() in text.lower() for k in ANIME):
             continue
+
         uid = hashlib.sha1((title + link).encode()).hexdigest()[:16]
         out.append({
             "id": uid,
@@ -102,7 +113,7 @@ def parse(data, hint):
             "title": title,
             "shop": "",
             "area": guess_area(text),
-            "date": to_date_str(pub),
+            "date": pub_dt.strftime("%Y-%m-%d") if pub_dt else now.strftime("%Y-%m-%d"),
             "summary": desc[:300],
             "source": "Google News",
             "url": link,
@@ -149,17 +160,16 @@ def merge_and_find_new(collected, stored):
 def digest(new_items):
     if not new_items:
         return None  # 新着なしの日は送らない
-    labels = {"new": "🟢 新店", "close": "🔴 閉店", "event": "🔵 アニメイベント"}
-    parts = ["【札幌中央区 情報】", datetime.now(JST).strftime("%Y/%m/%d（%a）") + " 09:00"]
+    labels = {"new": "🟢新店", "close": "🔴閉店", "event": "🔵アニメ"}
+    parts = [datetime.now(JST).strftime("%m/%d") + " 札幌中央区"]
     for cat in ("new", "close", "event"):
         group = [x for x in new_items if x["category"] == cat][:MAX_ITEMS]
         if not group:
             continue
-        parts += ["", labels[cat]]
+        parts.append(labels[cat])
         for x in group:
-            # URLは通知に含めない（タイトルのみ）
-            parts.append(f"・[{x['area']}] " + x["title"][:90])
-    parts.append("\n※自動収集。重要情報は情報元を確認してください。")
+            title = x["title"][:MAX_TITLE_LEN]
+            parts.append(f"[{x['area']}]{title}")
     return "\n".join(parts)[:4900]
 
 
