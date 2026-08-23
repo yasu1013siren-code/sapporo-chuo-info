@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sapporo Chuo Info v2.1 collector + LINE notification.
+"""Sapporo Chuo Info v2.2 collector + LINE notification.
 
 Environment variables:
   LINE_CHANNEL_ACCESS_TOKEN
@@ -26,16 +26,21 @@ DATA_PATH = os.path.join("data", "items.json")
 QUERIES = [
  ("new", "札幌市中央区 飲食店 開店 OR オープン"),
  ("close", "札幌市中央区 飲食店 閉店 OR 閉店予定"),
- ("event", "札幌市中央区 イベント 2026"),
+ ("event", "札幌市中央区 アニメ イベント 2026"),
  ("new", "すすきの 飲食店 オープン"),
  ("close", "すすきの 飲食店 閉店"),
- ("event", "大通 すすきの イベント 2026"),
+ ("event", "すすきの アニメ イベント 2026"),
+ ("new", "麻生 飲食店 オープン"),
+ ("close", "麻生 飲食店 閉店"),
+ ("event", "麻生 アニメ イベント 2026"),
 ]
 CHUO = ["すすきの", "大通", "狸小路", "円山", "中島公園", "二条市場", "創成川",
-        "サッポロファクトリー", "札幌市中央区", "中央区"]
+        "サッポロファクトリー", "麻生", "札幌市中央区", "中央区"]
 GENERIC_AREA = {"札幌市中央区", "中央区"}
 FOOD = ["飲食", "レストラン", "居酒屋", "バー", "BAR", "カフェ", "喫茶", "ラーメン", "焼肉",
         "寿司", "うどん", "そば", "カレー", "スイーツ", "ベーカリー", "パン", "食堂", "料理"]
+ANIME = ["アニメ", "漫画", "マンガ", "声優", "コスプレ", "フィギュア", "同人",
+         "コラボカフェ", "ポップアップストア", "キャラクター", "原画", "上映会"]
 
 
 def fetch(q):
@@ -86,6 +91,9 @@ def parse(data, hint):
             continue
         cat = category(text, hint)
         if cat in ("new", "close") and not any(k.lower() in text.lower() for k in FOOD):
+            continue
+        # イベントはアニメ関連キーワードにマッチするものだけ残す
+        if cat == "event" and not any(k.lower() in text.lower() for k in ANIME):
             continue
         uid = hashlib.sha1((title + link).encode()).hexdigest()[:16]
         out.append({
@@ -141,7 +149,7 @@ def merge_and_find_new(collected, stored):
 def digest(new_items):
     if not new_items:
         return None  # 新着なしの日は送らない
-    labels = {"new": "🟢 新店", "close": "🔴 閉店", "event": "🔵 イベント"}
+    labels = {"new": "🟢 新店", "close": "🔴 閉店", "event": "🔵 アニメイベント"}
     parts = ["【札幌中央区 情報】", datetime.now(JST).strftime("%Y/%m/%d（%a）") + " 09:00"]
     for cat in ("new", "close", "event"):
         group = [x for x in new_items if x["category"] == cat][:MAX_ITEMS]
@@ -149,9 +157,8 @@ def digest(new_items):
             continue
         parts += ["", labels[cat]]
         for x in group:
-            parts.append("・" + x["title"][:90])
-            if x.get("url"):
-                parts.append("  " + x["url"])
+            # URLは通知に含めない（タイトルのみ）
+            parts.append(f"・[{x['area']}] " + x["title"][:90])
     parts.append("\n※自動収集。重要情報は情報元を確認してください。")
     return "\n".join(parts)[:4900]
 
@@ -166,8 +173,12 @@ def line_push(text):
         data=payload,
         headers={"Content-Type": "application/json", "Authorization": "Bearer " + token},
         method="POST")
-    with urllib.request.urlopen(req, timeout=25) as r:
-        print("LINE status:", r.status)
+    try:
+        with urllib.request.urlopen(req, timeout=25) as r:
+            print("LINE status:", r.status)
+    except urllib.error.HTTPError as e:
+        print("LINE push failed:", e.code, e.read().decode(errors="replace"))
+        raise
 
 
 if __name__ == "__main__":
